@@ -1,5 +1,5 @@
 # CoffeShopTiaRosa
-CoffeShooTiaRosa
+CoffeShopTiaRosa
 
 Informações do (site Coffee Shops Tia Rosa)
 
