@@ -1,0 +1,235 @@
+import sqlite3
+from datetime import datetime
+
+
+def mostraLinha():
+    print('-=-' * 30)
+
+
+def banco_clientes():
+    conexao = sqlite3.connect('coffeeShopsTiaRosa.db')
+    cursor = conexao.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS clientes
+                      (
+                          id
+                          INTEGER
+                          PRIMARY
+                          KEY
+                          AUTOINCREMENT,
+                          nome
+                          TEXT
+                          NOT
+                          NULL,
+                          cpf
+                          TEXT
+                          NOT
+                          NULL,
+                          telefone
+                          TEXT
+                      )''')
+    conexao.commit()
+    conexao.close()
+
+
+def banco_produtos():
+    conexao = sqlite3.connect('coffeeShopsTiaRosa.db')
+    cursor = conexao.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS produtos
+                      (
+                          id
+                          INTEGER
+                          PRIMARY
+                          KEY
+                          AUTOINCREMENT,
+                          codigo
+                          TEXT
+                          NOT
+                          NULL,
+                          nome
+                          TEXT
+                          NOT
+                          NULL,
+                          preco
+                          REAL
+                      )''')
+    conexao.commit()
+    conexao.close()
+
+
+def banco_pedidos():
+    conexao = sqlite3.connect('cafeteria.tia.rosa.db')
+    cursor = conexao.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS pedidos
+    (
+        id
+        INTEGER
+        PRIMARY
+        KEY
+        AUTOINCREMENT,
+        cliente_id
+        INTEGER,
+        data_pedido
+        TEXT,
+        total_pedido
+        REAL,
+        FOREIGN
+        KEY
+                      (
+        cliente_id
+                      ) REFERENCES clientes
+                      (
+                          id
+                      )
+        )''')
+    conexao.commit()
+    conexao.close()
+
+
+banco_clientes()
+banco_produtos()
+banco_pedidos()
+
+
+def cadastro_produto():
+    print('Cadastrar produtos')
+    codigo = input('Código do produto: ')
+    nome = input('Nome do produto: ')
+    preco = float(input('Preço do produto R$: '))
+
+    conexao = sqlite3.connect('coffeeShopsTiaRosa.db')
+    cursor = conexao.cursor()
+    cursor.execute('INSERT INTO produtos (codigo, nome, preco) VALUES (?, ?, ?)', (codigo, nome, preco))
+    conexao.commit()
+    conexao.close()
+    input('Produto cadastrado com sucesso! Pressione Enter para continuar...')
+
+
+def cadastro_clientes():
+    print('Cadastrar clientes')
+    nome = input('Nome: ').strip()
+    cpf = input('CPF: ')
+    telefone = input('Telefone: ')
+
+    conexao = sqlite3.connect('coffeeShopsTiaRosa.db')
+    cursor = conexao.cursor()
+    cursor.execute('INSERT INTO clientes (nome, cpf, telefone) VALUES (?, ?, ?)', (nome, cpf, telefone))
+    conexao.commit()
+    conexao.close()
+    input('Cliente cadastrado com sucesso! Pressione Enter para continuar...')
+
+
+def calcular_total_pedido(item_pedido):
+    total = 0.0
+    conexao = sqlite3.connect('coffeeShopsTiaRosa.db')
+    cursor = conexao.cursor()
+    for item in item_pedido:
+        codigo_nome = item['codigo_nome']
+        quantidade = item['quantidade']
+        cursor.execute('SELECT preco FROM produtos WHERE codigo = ? OR nome = ?', (codigo_nome, codigo_nome))
+        produto = cursor.fetchone()
+        if produto:
+            total += produto[0] * quantidade
+        else:
+            print(f'Produto "{codigo_nome}" não encontrado.')
+            return None
+    conexao.close()
+    return total
+
+
+def novo_pedido():
+    print('Novo pedido')
+    cliente_id = None
+    itens_pedido = []
+
+    identificar = input('Deseja identificar o cliente? (S/N): ').lower()
+    if identificar == 's':
+        try:
+            cliente_id = int(input('Digite o ID do cliente: '))
+        except ValueError:
+            print('ID inválido. Vamos prosseguir sem identificação.')
+
+    while True:
+        codigo_nome_produto = input('Digite o código ou nome do produto (ou "fim" para finalizar): ')
+        if codigo_nome_produto.lower() == 'fim':
+            break
+        try:
+            quantidade = int(input('Digite a quantidade de produto:'))
+            itens_pedido.append({'codigo_nome': codigo_nome_produto, 'quantidade': quantidade})
+        except ValueError:
+            print('Quantidade inválida. Tente novamente.')
+
+    if itens_pedido:
+        total_pedido = calcular_total_pedido(itens_pedido)
+        if total_pedido is not None:
+            conexao = sqlite3.connect('coffeeShopsTiaRosa.db')
+            cursor = conexao.cursor()
+            cursor.execute(
+                'INSERT INTO pedidos (cliente_id,  total_pedido) VALUES (?, ?)',
+                (cliente_id, total_pedido))
+            conexao.commit()
+            conexao.close()
+            print(f'Pedido realizado com sucesso! Total a pagar: R$ {total_pedido:.2f}')
+    else:
+        print('Nenhum item adicionado ao pedido.')
+
+
+def lista_clientes():
+    conexao = sqlite3.connect('coffeeShopsTiaRosa.db')
+    cursor = conexao.cursor()
+    cursor.execute('SELECT id, nome, cpf, telefone FROM clientes')
+    clientes = cursor.fetchall()
+    conexao.close()
+
+    if clientes:
+        print('Lista de Clientes')
+        for c in clientes:
+            print(f'ID: {c[0]} | Nome: {c[1]} | CPF: {c[2]} | Telefone: {c[3]}')
+    else:
+        print('Nenhum cliente cadastrado.')
+
+
+def lista_produtos():
+    conexao = sqlite3.connect('coffeeShopsTiaRosa.db')
+    cursor = conexao.cursor()
+    cursor.execute('SELECT id, codigo, nome, preco FROM produtos')
+    produtos = cursor.fetchall()
+    conexao.close()
+
+    if produtos:
+        print('Lista de Produtos')
+        for p in produtos:
+            print(f'ID: {p[0]} | Código: {p[1]} | Nome: {p[2]} | Preço: R$ {p[3]:.2f}')
+    else:
+        print('Nenhum produto cadastrado.')
+
+
+while True:
+    mostraLinha()
+    print('Menu Principal')
+    mostraLinha()
+    print('1 - Cadastro de Produtos')
+    print('2 - Cadastro de Clientes')
+    print('3 - Novo Pedido')
+    print('4 - Lista de Clientes')
+    print('5 - Lista de Produtos')
+    print('6 - Sair')
+    mostraLinha()
+
+    opcao = input('Escolha uma opção: ')
+    if opcao == '1':
+        cadastro_produto()
+    elif opcao == '2':
+        cadastro_clientes()
+    elif opcao == '3':
+        novo_pedido()
+    elif opcao == '4':
+        lista_clientes()
+        input('Pressione Enter para continuar...')
+    elif opcao == '5':
+        lista_produtos()
+        input('Pressione Enter para continuar...')
+    elif opcao == '6':
+        print('Saindo do sistema... Até logo!')
+        break
+    else:
+        print('Opção inválida. Tente novamente.')
